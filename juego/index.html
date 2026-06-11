@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detective de Chinches</title>
+<style>
+    body { font-family: 'Comic Sans MS', sans-serif; background-color: #87CEEB; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .panel { background: #fff; max-width: 600px; width: 100%; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; display: none; }
+    #menu-screen { display: block; border: 5px solid #32CD32; }
+    #trivia-container { border: 5px solid #FFD700; }
+    #lab-container { border: 5px solid #9370DB; }
+    h1 { color: #FF4500; font-size: 2em; margin-top: 0; }
+    .btn { color: white; border: none; padding: 15px; border-radius: 15px; cursor: pointer; font-size: 1.2em; font-weight: bold; width: 100%; margin: 10px 0; transition: transform 0.1s; }
+    .btn:hover { transform: scale(1.02); }
+    .btn-trivia { background: #1E90FF; }
+    .btn-lab { background: #9370DB; }
+    .btn-identificacion { background: #FF4500; }
+    .btn-opt { background: #FFD700; color: #333; margin-top: 5px; }
+    .btn-correct { background: #32CD32 !important; color: white !important; }
+    .btn-incorrect { background: #FF6347 !important; color: white !important; }
+    .btn-next { background: #FF8C00; display: none; color: white; }
+    .btn-menu { background: #A9A9A9; width: auto; padding: 10px 20px; margin-top: 20px; color: white; }
+    .hud { display: flex; justify-content: space-between; background: #FFFACD; padding: 10px; border-radius: 10px; margin-bottom: 15px; font-weight: bold; border: 2px dashed #FF8C00; }
+    .emoji-box { font-size: 4em; margin: 10px 0; }
+    .feedback { margin-top: 20px; font-size: 1.2em; font-weight: bold; min-height: 30px; }
+    
+    /* Estilos para imágenes */
+    .bug-stage { display: flex; justify-content: center; gap: 20px; margin: 20px 0; min-height: 150px; align-items: center; }
+    .bug-img { width: 140px; height: 140px; object-fit: contain; cursor: pointer; border: 4px solid transparent; border-radius: 15px; transition: transform 0.2s; }
+    .bug-img:hover { border: 4px solid #FFD700; transform: scale(1.05); }
+    
+    /* CSS Dibujo original (para el Modo Laboratorio) */
+    .bug { position: relative; width: 100px; height: 140px; cursor: pointer; transition: transform 0.2s; }
+    .bug:hover { transform: scale(1.1); }
+    .triatomino .conexivo { position: absolute; width: 100px; height: 130px; background: repeating-linear-gradient(45deg, #FFD700, #FFD700 10px, #333 10px, #333 20px); border-radius: 40%; top: 10px; left: 0; z-index: 1; border: 2px solid #000; }
+    .triatomino .cuerpo { position: absolute; width: 70px; height: 110px; background: #5c4033; border-radius: 40%; top: 20px; left: 15px; z-index: 2; }
+    .triatomino .cabeza { position: absolute; width: 20px; height: 35px; background: #333; border-radius: 40% 40% 10% 10%; top: -15px; left: 40px; z-index: 3; }
+    .triatomino .trompa { position: absolute; width: 4px; height: 25px; background: #000; top: -35px; left: 48px; z-index: 4; }
+    .inofensivo .cuerpo { position: absolute; width: 90px; height: 120px; background: #2E8B57; border-radius: 50%; top: 10px; left: 5px; z-index: 2; border: 2px solid #000; }
+    .inofensivo .cabeza { position: absolute; width: 30px; height: 20px; background: #222; border-radius: 50%; top: -5px; left: 35px; z-index: 3; }
+    .inofensivo .trompa-curva { position: absolute; width: 25px; height: 25px; border-left: 4px solid #000; border-bottom: 4px solid transparent; border-radius: 50%; top: -15px; left: 45px; transform: rotate(45deg); z-index: 4; }
+</style>
+</head>
+<body>
+
+<audio id="audioFondo" src="fondo.wav" loop></audio>
+<audio id="audioCorrecto" src="correcto.wav"></audio>
+<audio id="audioIncorrecto" src="incorrecto.wav"></audio>
+
+<div id="menu-screen" class="panel">
+    <div style="font-size: 5em;">🕵️‍♂️🔍</div>
+    <h1>Academia de Guardianes</h1>
+    <button class="btn btn-trivia" onclick="startMode('trivia')">📖 Modo Historia</button>
+    <button class="btn btn-identificacion" onclick="startMode('identificacion')">🔎 Modo Identificación (Imágenes)</button>
+    <button class="btn btn-lab" onclick="startMode('lab')">🔬 Modo Laboratorio (Dibujos)</button>
+</div>
+
+<!-- Contenedor Trivia -->
+<div id="trivia-container" class="panel">
+    <h1 style="color: #1E90FF;">📖 Aventura</h1>
+    <div id="t-story" style="font-size: 1.2em; font-weight: bold; margin-bottom: 15px;"></div>
+    <div id="t-options" style="display: flex; flex-direction: column;"></div>
+    <div id="t-feedback" class="feedback"></div>
+    <button id="t-next" class="btn btn-next" onclick="nextTrivia()">Siguiente ➡️</button>
+    <button class="btn btn-menu" onclick="returnToMenu()">🏠 Volver al Menú</button>
+</div>
+
+<!-- Contenedor Laboratorio/Identificación -->
+<div id="lab-container" class="panel">
+    <h1 id="lab-title" style="color: #9370DB;">Laboratorio</h1>
+    <div class="hud">
+        <div>Nivel: <span id="l-level">1</span>/3</div>
+        <div>Puntos: <span id="l-score">0</span> ⭐️</div>
+    </div>
+    <div id="l-story" style="font-size: 1.2em; font-weight: bold; margin-bottom: 10px;"></div>
+    <div id="l-stage" class="bug-stage"></div>
+    <div id="l-options" style="display: flex; flex-direction: column;"></div>
+    <div id="l-feedback" class="feedback"></div>
+    <button id="l-next" class="btn btn-next" onclick="nextLab()">Siguiente ➡️</button>
+    <button class="btn btn-menu" onclick="returnToMenu()">🏠 Volver al Menú</button>
+</div>
+
+<script>
+    const triviaLevels = [ /* Mantener estructura original de trivia */ ];
+
+    // Configura aquí tus archivos. Ejemplo: 'triatomino1' buscará 'triatomino1.png'
+    const identificacionLevels = [
+        { story: "Ronda 1: ¿Cuál es el triatomino?", bugs: [{ type: 'triatomino1' }, { type: 'inofensivo1' }], answer: 0, reason: "Correcto." },
+        { story: "Ronda 2: ¿Cuál transmite el Chagas?", bugs: [{ type: 'inofensivo2' }, { type: 'triatomino2' }], answer: 1, reason: "Bien hecho." },
+        { story: "Ronda 3: ¿Dónde está el vector?", bugs: [{ type: 'triatomino3' }, { type: 'inofensivo3' }], answer: 0, reason: "¡Excelente!" }
+    ];
+
+    const labLevels = [
+        { story: "Observa las trompas.", bugs: [{ type: 'inofensivo' }, { type: 'triatomino' }], answer: 1, reason: "Trompa recta." },
+        { story: "Mira los bordes.", bugs: [{ type: 'triatomino' }, { type: 'inofensivo' }], answer: 0, reason: "Patrón de manchas." },
+        { story: "Selecciona al transmisor.", bugs: [{ type: 'inofensivo' }, { type: 'triatomino' }], answer: 1, reason: "Identificado." }
+    ];
+
+    let currentMode = '';
+    let currentIdx = 0;
+    let score = 0;
+
+    function reproducirAudio(id) { document.getElementById(id).currentTime = 0; document.getElementById(id).play().catch(()=>{}); }
+
+    function startMode(mode) {
+        reproducirAudio('audioFondo');
+        document.getElementById('menu-screen').style.display = 'none';
+        currentMode = mode;
+        currentIdx = 0;
+        score = 0;
+        
+        if (mode === 'trivia') {
+            document.getElementById('trivia-container').style.display = 'block';
+            loadTrivia();
+        } else {
+            document.getElementById('lab-container').style.display = 'block';
+            document.getElementById('lab-title').innerText = (mode === 'identificacion') ? "🔎 Identificación" : "🔬 Laboratorio";
+            loadLab();
+        }
+    }
+
+    function loadLab() {
+        const levels = (currentMode === 'identificacion') ? identificacionLevels : labLevels;
+        const lvl = levels[currentIdx];
+        document.getElementById('l-level').innerText = (currentIdx + 1);
+        document.getElementById('l-story').innerText = lvl.story;
+        document.getElementById('l-feedback').innerText = '';
+        document.getElementById('l-next').style.display = 'none';
+        const stage = document.getElementById('l-stage');
+        stage.innerHTML = '';
+        const optDiv = document.getElementById('l-options');
+        optDiv.innerHTML = '';
+
+        lvl.bugs.forEach((bug, idx) => {
+            let bugDiv = document.createElement('div');
+            if (currentMode === 'identificacion') {
+                bugDiv.innerHTML = `<img src="${bug.type}.png" class="bug-img">`;
+            } else {
+                bugDiv.className = `bug ${bug.type}`;
+                bugDiv.innerHTML = (bug.type === 'triatomino') ? `<div class="conexivo"></div><div class="cuerpo"></div><div class="cabeza"></div><div class="trompa"></div>` : `<div class="cuerpo"></div><div class="cabeza"></div><div class="trompa-curva"></div>`;
+            }
+            bugDiv.onclick = () => checkLab(idx, lvl.answer, lvl.reason);
+            stage.appendChild(bugDiv);
+
+            let btn = document.createElement('button');
+            btn.className = 'btn btn-opt';
+            btn.id = `lab-btn-${idx}`;
+            btn.innerText = `Opción ${idx + 1}`;
+            btn.onclick = () => checkLab(idx, lvl.answer, lvl.reason);
+            optDiv.appendChild(btn);
+        });
+    }
+
+    function checkLab(selected, correct, reason) {
+        const btns = document.getElementById('l-options').children;
+        for (let b of btns) b.disabled = true;
+        if (selected === correct) {
+            reproducirAudio('audioCorrecto');
+            score += 10;
+            document.getElementById('l-feedback').innerHTML = `<span style="color:#228B22">✔️ ${reason}</span>`;
+            document.getElementById(`lab-btn-${selected}`).classList.add('btn-correct');
+        } else {
+            reproducirAudio('audioIncorrecto');
+            document.getElementById('l-feedback').innerHTML = `<span style="color:#FF4500">❌ Incorrecto.</span>`;
+            document.getElementById(`lab-btn-${selected}`).classList.add('btn-incorrect');
+            document.getElementById(`lab-btn-${correct}`).classList.add('btn-correct');
+        }
+        document.getElementById('l-next').style.display = 'block';
+        document.getElementById('l-score').innerText = score;
+    }
+
+    function nextLab() {
+        const levels = (currentMode === 'identificacion') ? identificacionLevels : labLevels;
+        currentIdx++;
+        if (currentIdx < levels.length) loadLab();
+        else {
+            document.getElementById('l-stage').innerHTML = '<div style="font-size: 5em;">🏆</div>';
+            document.getElementById('l-story').innerText = "¡Misión cumplida!";
+            document.getElementById('l-options').innerHTML = '';
+            document.getElementById('l-next').style.display = 'none';
+        }
+    }
+
+    function returnToMenu() {
+        document.getElementById('audioFondo').pause();
+        document.getElementById('trivia-container').style.display = 'none';
+        document.getElementById('lab-container').style.display = 'none';
+        document.getElementById('menu-screen').style.display = 'block';
+    }
+    
+    // (Mantén tus funciones trivia aquí...)
+</script>
+
+</body>
+</html>
