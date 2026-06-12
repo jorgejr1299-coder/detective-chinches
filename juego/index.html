@@ -48,13 +48,12 @@
 <audio id="audioIncorrecto" src="incorrecto.wav"></audio>
 
 <div id="menu-screen" class="panel">
-    <div style="font-size: 5em;">🕵️‍♂️🔍</div>
     <h1>Academia de Guardianes</h1>
-    <p style="font-size: 1.2em; font-weight: bold; color: #555;">Elige tu entrenamiento:</p>
-    <button class="btn btn-trivia" onclick="startMode('trivia')">📖 Modo Historia: Decisiones</button>
-    <button class="btn btn-lab" onclick="startMode('lab')">🔬 Modo Laboratorio: Identificación Visual</button>
+    <button class="btn" style="background:#FF4500" onclick="startMode('identificacion')">Identificación (Imágenes)</button>
+    <button class="btn" style="background:#9370DB" onclick="startMode('lab')">Laboratorio (CSS)</button>
+    <button class="btn" style="background:#FFD700; color: #333;" onclick="startTrivia()">Modo Historia</button>
 </div>
-
+    
 <div id="trivia-container" class="panel">
     <h1 style="color: #1E90FF;">📖 Aventura</h1>
     <div class="hud">
@@ -86,6 +85,18 @@
 <script>
     // DATOS DE JUEGO
     const triviaLevels = [ /* ... tu arreglo de trivia permanece igual ... */
+        let currentMode = 'lab'; // Variable para saber qué modo jugar
+
+// Tus niveles originales de CSS (mantenlos como están)
+const labLevels = [ 
+    /* ... tus datos de laboratorio actuales ... */ 
+];
+
+// Nuevos niveles para Identificación
+const identificacionLevels = [
+    { story: "¿Cuál es el triatomino?", bugs: ['triatomino1', 'inofensivo1'], answer: 0, reason: "¡Correcto!" },
+    { story: "¿Cuál transmite el Chagas?", bugs: ['inofensivo2', 'triatomino2'], answer: 1, reason: "Bien hecho." }
+];
         { emoji: "☀️🏜️", story: "Hace mucho calor y no ha llovido en el monte. ¿Hacia dónde crees que va a caminar para buscar comida?", options: ["A esconderse debajo de una piedra.", "Hacia la casa de tu familia.", "A volar hasta la luna.", "Se queda en el desierto."], answer: 1, reason: "Cuando hay sequía, los chinches se acercan a las casas." },
         { emoji: "🐕🐓", story: "El chinche llegó al patio. ¿A quién crees que va a picar primero?", options: ["Al pez.", "Al perro y las gallinas.", "A una hormiga.", "A una planta."], answer: 1, reason: "A los chinches les gusta la sangre de los perritos y las gallinas." },
         { emoji: "🌧️🏠", story: "¡Empieza a llover! ¿Cuál es su escondite favorito?", options: ["El techo o las grietas.", "El charco de agua.", "Adentro de la nevera.", "En medio del pasto."], answer: 0, reason: "Buscan lugares oscuros y secos como techos y grietas." },
@@ -114,18 +125,12 @@
     }
 
     function startMode(mode) {
-        reproducirAudio('audioFondo');
-        document.getElementById('menu-screen').style.display = 'none';
-        currentMode = mode;
-        currentIdx = 0;
-        score = 0;
-        if (mode === 'trivia') {
-            document.getElementById('trivia-container').style.display = 'block';
-            document.getElementById('t-total').innerText = triviaLevels.length;
-            loadTrivia();
-        } else {
-            document.getElementById('lab-container').style.display = 'block';
-            loadLab();
+    currentMode = mode;
+    currentIdx = 0;
+    score = 0;
+    document.getElementById('menu-screen').style.display = 'none';
+    document.getElementById('lab-container').style.display = 'block';
+    loadLab();
         }
     }
 
@@ -197,28 +202,44 @@
     }
 
     function loadLab() {
-        const lvl = labLevels[currentIdx];
-        document.getElementById('l-level').innerText = (currentIdx + 1);
-        document.getElementById('l-score').innerText = score;
-        document.getElementById('l-story').innerText = lvl.story;
-        document.getElementById('l-feedback').innerText = '';
-        document.getElementById('l-next').style.display = 'none';
-        const stage = document.getElementById('l-stage');
-        stage.innerHTML = '';
-        const optDiv = document.getElementById('l-options');
-        optDiv.innerHTML = '';
-        lvl.bugs.forEach((bug, idx) => {
-            let bugDiv = document.createElement('div');
-            bugDiv.className = `bug ${bug.type}`;
-            bugDiv.innerHTML = (bug.type === 'triatomino') ? `<div class="conexivo"></div><div class="cuerpo"></div><div class="cabeza"></div><div class="trompa"></div>` : `<div class="cuerpo"></div><div class="cabeza"></div><div class="trompa-curva"></div>`;
-            bugDiv.onclick = () => checkLab(idx, lvl.answer, lvl.reason);
-            stage.appendChild(bugDiv);
-            let btn = document.createElement('button');
-            btn.className = 'btn btn-opt';
-            btn.id = `lab-btn-${idx}`;
-            btn.innerText = `Seleccionar Insecto ${idx + 1}`;
-            btn.onclick = () => checkLab(idx, lvl.answer, lvl.reason);
-            optDiv.appendChild(btn);
+    // Elige el array según el modo
+    const levels = (currentMode === 'identificacion') ? identificacionLevels : labLevels;
+    const lvl = levels[currentIdx];
+
+    document.getElementById('l-level').innerText = (currentIdx + 1);
+    document.getElementById('l-story').innerText = lvl.story;
+    document.getElementById('l-feedback').innerText = '';
+    document.getElementById('l-next').style.display = 'none';
+    
+    const stage = document.getElementById('l-stage');
+    stage.innerHTML = '';
+    const optDiv = document.getElementById('l-options');
+    optDiv.innerHTML = '';
+
+    lvl.bugs.forEach((bugType, idx) => {
+        let bugDiv = document.createElement('div');
+        bugDiv.className = 'bug';
+        
+        if (currentMode === 'identificacion') {
+            // Muestra imagen PNG (asegúrate de que los archivos estén en la raíz)
+            bugDiv.innerHTML = `<img src="${bugType}.png" style="width:100%; height:100%; object-fit:contain;" onerror="this.style.display='none'">`;
+        } else {
+            // Tu lógica original de CSS
+            bugDiv.innerHTML = (bugType === 'triatomino') ? 
+                `<div class="conexivo"></div><div class="cuerpo"></div><div class="cabeza"></div><div class="trompa"></div>` : 
+                `<div class="cuerpo"></div><div class="cabeza"></div><div class="trompa-curva"></div>`;
+        }
+        
+        stage.appendChild(bugDiv);
+        
+        let btn = document.createElement('button');
+        btn.className = 'btn btn-opt';
+        btn.id = `lab-btn-${idx}`;
+        btn.innerText = `Opción ${idx + 1}`;
+        btn.onclick = () => checkLab(idx, lvl.answer, lvl.reason);
+        optDiv.appendChild(btn);
+    });
+}
         });
     }
 
